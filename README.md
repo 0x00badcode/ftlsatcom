@@ -6,11 +6,11 @@ This software is developed strictly for research and educational purposes. The a
 
 ### Warning
 
-Using this software to communicate over any network, including satellites, may be subject to local and international laws and regulations. The user is solely responsible for ensuring all legal compliance and should refrain from utilizing this software in any manner that violates such norms. 
+Using this software to communicate over any network, including satellites, may be subject to local and international laws and regulations. The user is solely responsible for ensuring all legal compliance and should refrain from utilizing this software in any manner that violates such norms.
 
 ## Description
 
-[Your Project Name] is a research project exploring secure communication using satellite technology. It is purely experimental and is not designed or intended for actual use in communicating over satellite networks.
+Ftlsatcom is a research project exploring secure communication using satellite technology. It is purely experimental and is not designed or intended for actual use in communicating over satellite networks.
 
 ## Purpose
 
