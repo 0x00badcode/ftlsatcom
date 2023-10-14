@@ -1,9 +1,10 @@
 #include "CryptoManager.hpp"
 #include "KeyManager.hpp"
-#include <openssl/conf.h>
-#include <openssl/err.h>
+#include "PacketFactory.hpp"
+// #include <openssl/conf.h>
+// #include <openssl/err.h>
 #include <string.h>
-#include <sodium.h>
+// #include <sodium.h>
 #include <iostream>
 #include <string>
 #include <random>
@@ -17,14 +18,19 @@ std::string get_user_input() {
 
 void chat(CryptoManager& cryptoManager, KeyManager& keyring) {
     std::string message;
+    PacketFactory packetFactory(keyring);
     while(true) {
         message = get_user_input();
         if (sodium_memcmp(message.data(), "exit", 4) == 0) { break; }
 
         std::string encrypted_msg = cryptoManager.encrypt(message);
 
-        std::cout << "Encrypted message: " << encrypted_msg << std::endl;
+        std::cout << "Encrypted message: '" << encrypted_msg << "'" << std::endl;
 
+        
+        packetFactory.pack(encrypted_msg);
+
+        
         std::string decrypted_msg = cryptoManager.decrypt(encrypted_msg);
         std::cout << "Decrypted message: " << decrypted_msg << std::endl;
     }

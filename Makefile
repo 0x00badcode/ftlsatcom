@@ -16,7 +16,7 @@ TARGET = ftlsat
 
 # Source directory and all source files
 SRCDIR = src
-SRC = $(wildcard $(SRCDIR)/*.cpp)
+SRC = $(wildcard $(SRCDIR)/*.cpp) main.cpp
 
 # Object files
 OBJ = $(SRC:.cpp=.o)
