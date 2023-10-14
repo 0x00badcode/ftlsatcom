@@ -5,6 +5,7 @@
 
 // size in bits
 constexpr int PACKET_SIZE = 200;
+constexpr int FULL_PACKET_SIZE = 1960;
 constexpr int PADDING_SIZE = 8;
 constexpr int SYNC_PATTERN_SIZE = 32;
 constexpr int SFD_SIZE = 8;
