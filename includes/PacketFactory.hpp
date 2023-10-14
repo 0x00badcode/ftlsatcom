@@ -5,7 +5,6 @@
 
 // size in bits
 constexpr int PACKET_SIZE = 200;
-constexpr int FULL_PACKET_SIZE = 1888;
 constexpr int PADDING_SIZE = 8;
 constexpr int SYNC_PATTERN_SIZE = 32;
 constexpr int SFD_SIZE = 8;
@@ -17,7 +16,7 @@ constexpr int SEQUENCE_NUMBER_SIZE = 16;
 constexpr int DATA_LENGTH_SIZE = 16;
 constexpr int KEY_SIZE = 32;
 constexpr int DATA_SIZE = 1600;
-constexpr int CHECKSUM_SIZE = 8;
+constexpr int CHECKSUM_SIZE = 16;
 constexpr int ENDING_BITS_SIZE = 24;
 
 class PacketFactory {

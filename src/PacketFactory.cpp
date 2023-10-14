@@ -66,8 +66,14 @@ std::string PacketFactory::addSFD()
  */
 std::string PacketFactory::addClockSyncBits()
 {
-    std::string pattern = "1101";
-    std::string clockSyncBits = pattern + pattern + pattern + pattern + pattern + pattern + pattern + pattern;
+    const int PATTERN_REPEAT_COUNT = 16; // 8 bytes / 0.5 byte = 16
+    const std::string CLOCK_SYNC_PATTERN = "1101";
+
+    std::string clockSyncBits = "";
+    for(int i = 0; i < PATTERN_REPEAT_COUNT; ++i) {
+        clockSyncBits += CLOCK_SYNC_PATTERN;
+    }
+
     return clockSyncBits;
 }
 
@@ -135,21 +141,21 @@ std::string PacketFactory::addControlInformation(std::string messageType, int da
 }
 
 /**
- * 8 bits ; 1 byte
+ * 16 bits ; 2 bytes
  * checksum of the data
  */
 std::string PacketFactory::addChecksum(std::string data)
 {
-    // Calculate the checksum
-    int checksum = 0;
+    unsigned int checksum = 0;
     for (char c : data) {
-        checksum += c;
+        checksum += static_cast<unsigned char>(c);
     }
 
-    std::string binaryChecksum = std::bitset<8>(checksum).to_string();
+    std::string binaryChecksum = std::bitset<16>(checksum).to_string();
 
     return binaryChecksum;
 }
+
 
 /**
  * 24 bits ; 3 bytes
@@ -164,9 +170,7 @@ std::string PacketFactory::addEndingBits()
 // std::vector<std::string> PacketFactory::pack(const std::string &encodedString)
 void PacketFactory::pack(const std::string &encodedString)
 {
-    std::cout << "Packing data: " << encodedString << std::endl;
     std::vector<std::vector<char>> binaryData = convertToBinary(encodedString);
-    printEncodedData(binaryData);
     const int dataSize = binaryData.size();
     const int fullPacketCount = dataSize / PACKET_SIZE;
     const int lastPacketSize = dataSize % PACKET_SIZE;
@@ -203,16 +207,11 @@ void PacketFactory::pack(const std::string &encodedString)
         std::string header = addPacketHeader();
         std::string controlInfo = addControlInformation("MSG", lastPacketSize, fullPacketCount, keyring.source_identifier);
         std::string checksum = addChecksum(lastPacketData);
+        std::cout << "lastPacketData: " << lastPacketData << "checksum: " << checksum << std::endl;
         std::string endingBits = addEndingBits();
         printAndHighlightPacket(header + controlInfo + lastPacketData + checksum + endingBits);
 
         packets.push_back(header + controlInfo + lastPacketData);
-    }
-
-    // Debug: print packet sizes
-    for (size_t i = 0; i < packets.size(); ++i)
-    {
-        std::cout << "Packet " << i << " size: " << packets[i].size() << std::endl;
     }
 }
 
@@ -257,12 +256,11 @@ void PacketFactory::printAndHighlightPacket(const std::string &packet)
     const std::string CYAN_COLOR = "\033[36m";
 
     std::cout << RED_COLOR << "Sync pattern," << GREEN_COLOR << "SFD," << YELLOW_COLOR << "clock sync bits," << BLUE_COLOR << "addressing bits," << MAGENTA_COLOR << "padding," << CYAN_COLOR << "packet type," << RED_COLOR << "timestamp," << GREEN_COLOR << "sequence number," << YELLOW_COLOR << "data length," << BLUE_COLOR << "key," << MAGENTA_COLOR << "padding," << CYAN_COLOR << "data," << RED_COLOR << "checksum," << GREEN_COLOR << "ending bits" << RESET_COLOR << std::endl;
-    try
-    {
+    try {
         std::cout << "Printing packet: " << std::endl;
         std::cout << RED_COLOR << packet.substr(0, 32)      // sync pattern (32 bits)
         << GREEN_COLOR << packet.substr(32, 8)    // SFD (8 bits)
-        << YELLOW_COLOR << packet.substr(40, 64)  // clock sync bits (64 bits)
+        << YELLOW_COLOR << packet.substr(40, 64) // clock sync bits (64 bits)
         << BLUE_COLOR << packet.substr(104, 32)   // addressing bits (32 bits)
         << MAGENTA_COLOR << packet.substr(136, 8) // padding (8 bits)
         << CYAN_COLOR << packet.substr(144, 8)    // packet type (8 bits)
@@ -272,12 +270,10 @@ void PacketFactory::printAndHighlightPacket(const std::string &packet)
         << BLUE_COLOR << packet.substr(230, 32)   // key (32 bits)
         << MAGENTA_COLOR << packet.substr(232, 8) // padding (8 bits)
         << CYAN_COLOR << packet.substr(240, 1600)  // data (1600 bits)
-        << RED_COLOR << packet.substr(1840, 8)     // checksum (8 bits)
-        << GREEN_COLOR << packet.substr(1848, 24) << RESET_COLOR  // ending bits (24 bits)
+        << RED_COLOR << packet.substr(1840, 16)     // checksum (16 bits)
+        << GREEN_COLOR << packet.substr(1856, 24) << RESET_COLOR  // ending bits (24 bits)
         << std::endl;
-    }
-    catch (const std::out_of_range &e)
-    {
+    } catch (const std::out_of_range &e) {
         std::cerr << "Packet is too short" << std::endl;
     }
 }
