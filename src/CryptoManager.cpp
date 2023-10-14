@@ -2,6 +2,7 @@
 #include <openssl/conf.h>
 #include <openssl/err.h>
 #include <string.h>
+#include <iostream>
 
 CryptoManager::CryptoManager(const KeyManager& keyManager)
     : keyManager(keyManager) {
@@ -21,41 +22,47 @@ CryptoManager::~CryptoManager() {
 std::string CryptoManager::encrypt(const std::string& plaintext) {
     int len;
     int ciphertext_len;
-    unsigned char ciphertext[128];
 
-    // Initialize AES-256-CBC encryption
-    EVP_EncryptInit_ex(ctx_enc, EVP_aes_256_cbc(), NULL,
-                       keyManager.encryption_key,
-                       keyManager.iv);
+    int block_size = EVP_CIPHER_block_size(EVP_aes_256_cbc());
 
-    // Encrypt the message
-    EVP_EncryptUpdate(ctx_enc, ciphertext, &len, (unsigned char*)plaintext.c_str(), plaintext.length());
+    std::vector<unsigned char> ciphertext(plaintext.length() + block_size);
+
+    if (1 != EVP_EncryptInit_ex(ctx_enc, EVP_aes_256_cbc(), NULL, keyManager.encryption_key, keyManager.iv)) {
+        std::cerr << "EVP_EncryptInit_ex() failed" << std::endl;
+    }
+
+    if (1 != EVP_EncryptUpdate(ctx_enc, ciphertext.data(), &len, reinterpret_cast<const unsigned char*>(plaintext.c_str()), plaintext.length())) {
+        std::cerr << "EVP_EncryptUpdate() failed" << std::endl;
+    }
     ciphertext_len = len;
 
-    // Finalize the encryption
-    EVP_EncryptFinal_ex(ctx_enc, ciphertext + len, &len);
+    if (1 != EVP_EncryptFinal_ex(ctx_enc, ciphertext.data() + len, &len)) {
+        std::cerr << "EVP_EncryptFinal_ex() failed" << std::endl;
+    }
     ciphertext_len += len;
 
-    return std::string((char*)ciphertext, ciphertext_len);
+    return std::string(ciphertext.begin(), ciphertext.begin() + ciphertext_len);
 }
 
 std::string CryptoManager::decrypt(const std::string& ciphertext) {
     int len;
     int plaintext_len;
-    unsigned char plaintext[128];
 
-    // Initialize AES-256-CBC decryption
-    EVP_DecryptInit_ex(ctx_dec, EVP_aes_256_cbc(), NULL,
-                       keyManager.encryption_key,
-                       keyManager.iv);
+    std::vector<unsigned char> plaintext(ciphertext.length());
 
-    // Decrypt the message
-    EVP_DecryptUpdate(ctx_dec, plaintext, &len, (unsigned char*)ciphertext.c_str(), ciphertext.length());
+    if (1 != EVP_DecryptInit_ex(ctx_dec, EVP_aes_256_cbc(), NULL, keyManager.encryption_key, keyManager.iv)) {
+        std::cerr << "EVP_DecryptInit_ex() failed" << std::endl;
+    }
+
+    if (1 != EVP_DecryptUpdate(ctx_dec, plaintext.data(), &len, reinterpret_cast<const unsigned char*>(ciphertext.c_str()), ciphertext.length())) {
+        std::cerr << "EVP_DecryptUpdate() failed" << std::endl;
+    }
     plaintext_len = len;
 
-    // Finalize the decryption
-    EVP_DecryptFinal_ex(ctx_dec, plaintext + len, &len);
+    if (1 != EVP_DecryptFinal_ex(ctx_dec, plaintext.data() + len, &len)) {
+        std::cerr << "EVP_DecryptFinal_ex() failed" << std::endl;
+    }
     plaintext_len += len;
 
-    return std::string((char*)plaintext, plaintext_len);
+    return std::string(plaintext.begin(), plaintext.begin() + plaintext_len);
 }

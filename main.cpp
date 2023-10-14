@@ -27,10 +27,9 @@ void chat(CryptoManager& cryptoManager, KeyManager& keyring) {
 
         std::cout << "Encrypted message: '" << encrypted_msg << "'" << std::endl;
 
-        
+
         packetFactory.pack(encrypted_msg);
 
-        
         std::string decrypted_msg = cryptoManager.decrypt(encrypted_msg);
         std::cout << "Decrypted message: " << decrypted_msg << std::endl;
     }

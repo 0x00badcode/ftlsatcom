@@ -6,7 +6,7 @@ OPENSSL_PATH = /opt/homebrew/opt/openssl@3
 LIBSODIUM_PATH = /opt/homebrew/opt/libsodium
 
 # Compiler Flags
-CXXFLAGS = -std=c++11 -Wall -I$(OPENSSL_PATH)/include -I$(LIBSODIUM_PATH)/include -I./includes
+CXXFLAGS = -g -o -std=c++11 -Wall -I$(OPENSSL_PATH)/include -I$(LIBSODIUM_PATH)/include -I./includes
 
 # Linker Flags
 LDFLAGS = -L$(OPENSSL_PATH)/lib -L$(LIBSODIUM_PATH)/lib -lcrypto -lssl -lsodium

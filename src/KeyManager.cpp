@@ -39,7 +39,7 @@ void KeyManager::clear_keys() {
 }
 
 void KeyManager::generate_source_identifier() {
-    const size_t id_size = 16;
+    const size_t id_size = 6; // 6 bytes = 48 bits
     std::vector<unsigned char> id(id_size);
     randombytes_buf(id.data(), id_size);
     std::stringstream ss;
