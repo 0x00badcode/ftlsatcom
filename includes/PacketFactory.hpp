@@ -32,7 +32,7 @@ public:
     std::string addClockSyncBits();
     std::string addAddressingBits();
     std::string addPacketHeader();
-    std::string addControlInformation(std::string packetType, int dataSize, int sequenceNumber, std::string key, std::string packetId);
+    std::string addControlInformation(std::string packetType, int dataSize, int sequenceNumber, std::string key, std::string packetId, std::string totalNumberOfPackets);
     std::string addChecksum(std::string data);
     std::string addEndingBits();
 
