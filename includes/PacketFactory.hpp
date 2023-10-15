@@ -26,12 +26,13 @@ public:
     explicit PacketFactory(const KeyManager& keyManager) : keyring(keyManager) { }
     ~PacketFactory() { }
     std::vector<std::vector <char> > convertToBinary(const std::string &encodedString);
+    std::string generatePacketId();
     std::string addSyncPattern();
     std::string addSFD();
     std::string addClockSyncBits();
     std::string addAddressingBits();
     std::string addPacketHeader();
-    std::string addControlInformation(std::string packetType, int dataSize, int sequenceNumber, std::string key);
+    std::string addControlInformation(std::string packetType, int dataSize, int sequenceNumber, std::string key, std::string packetId);
     std::string addChecksum(std::string data);
     std::string addEndingBits();
 
@@ -39,7 +40,7 @@ public:
     void pack(const std::string &encodedString);
 
 
-    std::string decode(const std::vector<char>& packedPacket);
+    std::vector<std::string> decode(const std::vector<char> &packedPacket);
     void printEncodedData(const std::vector<std::vector <char> >& encodedData);
     void printPackets(const std::vector<std::string> &packets);
     void printAndHighlightPacket(const std::string &packet);
