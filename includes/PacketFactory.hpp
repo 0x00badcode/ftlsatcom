@@ -4,18 +4,21 @@
 #include "KeyManager.hpp"
 
 // size in bits
-constexpr int PACKET_SIZE = 200;
-constexpr int FULL_PACKET_SIZE = 1960;
+constexpr int PACKET_SIZE = 200; // 200 bytes -> 1600 bits
+constexpr int FULL_PACKET_SIZE = 2008;
 constexpr int PADDING_SIZE = 8;
+
 constexpr int SYNC_PATTERN_SIZE = 32;
 constexpr int SFD_SIZE = 8;
 constexpr int CLOCK_SYNC_BITS_SIZE = 64;
-constexpr int ADDRESSING_BITS_SIZE = 32;
+constexpr int ADDRESSING_BITS_SIZE = 64;
 constexpr int PACKET_TYPE_SIZE = 8;
 constexpr int TIMESTAMP_SIZE = 32;
-constexpr int SEQUENCE_NUMBER_SIZE = 16;
 constexpr int DATA_LENGTH_SIZE = 16;
-constexpr int KEY_SIZE = 32;
+constexpr int SEQUENCE_NUMBER_SIZE = 16;
+constexpr int TOTAL_NUMBER_OF_PACKETS_SIZE = 16;
+constexpr int PACKET_ID_SIZE = 16;
+constexpr int KEY_SIZE = 64;
 constexpr int DATA_SIZE = 1600;
 constexpr int CHECKSUM_SIZE = 16;
 constexpr int ENDING_BITS_SIZE = 24;
@@ -33,6 +36,7 @@ public:
     std::string addAddressingBits();
     std::string addPacketHeader();
     std::string addControlInformation(std::string packetType, int dataSize, int sequenceNumber, std::string key, std::string packetId, std::string totalNumberOfPackets);
+    std::string addFooter(std::string data);
     std::string addChecksum(std::string data);
     std::string addEndingBits();
 

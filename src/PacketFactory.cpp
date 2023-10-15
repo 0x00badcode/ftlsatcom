@@ -10,9 +10,7 @@
 #include <iomanip>
 #include <sstream>
 
-// -----------------------------------------------------
-// ------------------ Packing worklow ------------------
-// -----------------------------------------------------
+// ------------------ Utils------------------
 
 std::vector<std::vector<char>> PacketFactory::convertToBinary(const std::string &encodedString)
 {
@@ -29,7 +27,6 @@ std::vector<std::vector<char>> PacketFactory::convertToBinary(const std::string 
     }
     return encodedData;
 }
-
 
 std::string stringToBinary(const std::string &input)
 {
@@ -52,33 +49,20 @@ std::string PacketFactory::generatePacketId() {
     return ss.str();
 }
 
-//------------------ Packing workflow ------------------
+//------------------ PACKET HEADER ------------------
 
-/**
- * 32 bits ; 4 bytes
- * '10' pattern repeated 16 times
- */
 std::string PacketFactory::addSyncPattern()
 {
     std::string syncPattern = "10101010101010101010101010101010";
     return syncPattern;
 }
 
-/**
- * Start Frame Delimiter
- * 8 bits ; 1 byte
- * '01111110' pattern
- */
 std::string PacketFactory::addSFD()
 {
     std::string sfd = "01111110";
     return sfd;
 }
 
-/**
- * 64 bits ; 8 bytes
- * '1101' pattern repeated 8 times
- */
 std::string PacketFactory::addClockSyncBits()
 {
     const int PATTERN_REPEAT_COUNT = 16; // 8 bytes / 0.5 byte = 16
@@ -92,10 +76,6 @@ std::string PacketFactory::addClockSyncBits()
     return clockSyncBits;
 }
 
-/**
- * 64 bits ; 8 bytes
- * ID of the user the packet is coming from
- */
 std::string PacketFactory::addAddressingBits()
 {
     std::string addressingBits = stringToBinary(keyring.source_identifier);
@@ -108,6 +88,7 @@ std::string PacketFactory::addPacketHeader()
     return packetHeader;
 }
 
+//------------------ PACKET CONTROL INFO ------------------
 
 std::string PacketFactory::addControlInformation(std::string messageType, int dataLength, int sequenceNumber, std::string key, std::string packetId, std::string totalNumberOfPackets)
 {
@@ -135,10 +116,14 @@ std::string PacketFactory::addControlInformation(std::string messageType, int da
     return controlInformation;
 }
 
-/**
- * 16 bits ; 2 bytes
- * checksum of the data
- */
+//------------------ PACKET TAIL ------------------
+
+std::string PacketFactory::addFooter(std::string data)
+{
+    std::string footer = addChecksum(data) + addEndingBits();
+    return footer;
+}
+
 std::string PacketFactory::addChecksum(std::string data)
 {
     unsigned int checksum = 0;
@@ -151,67 +136,45 @@ std::string PacketFactory::addChecksum(std::string data)
     return binaryChecksum;
 }
 
-/**
- * 24 bits ; 3 bytes
- * '000111000111000111000111' pattern
- */
 std::string PacketFactory::addEndingBits()
 {
     std::string endingBits = "000111000111000111000111";
     return endingBits;
 }
 
+//------------------ Packing workflow ------------------
 
-// std::vector<std::string> PacketFactory::pack(const std::string &encodedString)
 void PacketFactory::pack(const std::string &encodedString)
 {
-    std::vector<std::vector<char>> binaryData = convertToBinary(encodedString);
-    std::string packetId = generatePacketId();
-
+    auto binaryData = convertToBinary(encodedString);
+    auto packetId = generatePacketId();
     const int dataSize = binaryData.size();
     const int fullPacketCount = dataSize / PACKET_SIZE;
     const int lastPacketSize = dataSize % PACKET_SIZE;
     int totalNumberOfPackets = fullPacketCount + (lastPacketSize > 0 ? 1 : 0);
-    std::string binaryNumberOfPackets = std::bitset<16>(totalNumberOfPackets).to_string();
-    std::cout << "Total number of packets: " << binaryNumberOfPackets << std::endl;
+    auto binaryNumberOfPackets = std::bitset<16>(totalNumberOfPackets).to_string();
 
     std::vector<std::string> packets;
-    packets.reserve(fullPacketCount + (lastPacketSize > 0 ? 1 : 0));
+    packets.reserve(totalNumberOfPackets);
 
-    for (int i = 0; i < fullPacketCount; ++i)
-    {
+    for (int i = 0; i < totalNumberOfPackets; ++i) {
+        int currentPacketSize = (i == fullPacketCount) ? lastPacketSize : PACKET_SIZE;
+
         std::string packetData;
-        for (int j = 0; j < PACKET_SIZE; ++j)
-        {
+        for (int j = 0; j < currentPacketSize; ++j) {
             packetData += std::string(binaryData[i * PACKET_SIZE + j].begin(), binaryData[i * PACKET_SIZE + j].end());
         }
-        std::string header = addPacketHeader();
-        std::string controlInfo = addControlInformation("MSG", PACKET_SIZE, i, keyring.source_identifier, packetId, binaryNumberOfPackets);
-        std::string checksum = addChecksum(packetData);
-        std::string endingBits = addEndingBits();
-        printAndHighlightPacket(header + controlInfo + packetData + checksum + endingBits);
-        packets.push_back(header + controlInfo + packetData);
-    }
 
-
-    if (lastPacketSize > 0)
-    {
-        std::string lastPacketData;
-        for (int j = 0; j < lastPacketSize; ++j)
-        {
-            lastPacketData += std::string(binaryData[fullPacketCount * PACKET_SIZE + j].begin(), binaryData[fullPacketCount * PACKET_SIZE + j].end());
+        if (i == fullPacketCount && lastPacketSize > 0) {
+            packetData.append((PACKET_SIZE - lastPacketSize) * 8, '0');
         }
 
-        // Pad the last packet
-        lastPacketData.append((PACKET_SIZE - lastPacketSize) * 8, '0');
-
         std::string header = addPacketHeader();
-        std::string controlInfo = addControlInformation("MSG", lastPacketSize, fullPacketCount, keyring.source_identifier, packetId, binaryNumberOfPackets);
-        std::string checksum = addChecksum(lastPacketData);
-        std::string endingBits = addEndingBits();
-        printAndHighlightPacket(header + controlInfo + lastPacketData + checksum + endingBits);
+        std::string controlInfo = addControlInformation("MSG", currentPacketSize, i, keyring.source_identifier, packetId, binaryNumberOfPackets);
+        std::string footer = addFooter(packetData);
 
-        packets.push_back(header + controlInfo + lastPacketData + checksum + endingBits);
+        printAndHighlightPacket(header + controlInfo + packetData + footer); // debug
+        packets.push_back(header + controlInfo + packetData + footer);
     }
 }
 
@@ -224,6 +187,10 @@ std::vector<std::string> PacketFactory::decode(const std::vector<char> &packedPa
 
     return std::vector<std::string>();
 }
+
+
+
+// ------------------- debug -------------------
 
 void PacketFactory::printEncodedData(const std::vector<std::vector<char>> &encodedData)
 {
@@ -241,8 +208,7 @@ void PacketFactory::printEncodedData(const std::vector<std::vector<char>> &encod
 void PacketFactory::printPackets(const std::vector<std::string> &packets)
 {
     std::cout << "Printing packets: " << std::endl;
-    for (size_t i = 0; i < packets.size(); ++i)
-    {
+    for (size_t i = 0; i < packets.size(); ++i) {
         std::cout << packets[i] << std::endl;
     }
 }
@@ -261,22 +227,22 @@ void PacketFactory::printAndHighlightPacket(const std::string &packet)
     std::cout << RED_COLOR << "sync pattern," << GREEN_COLOR << "SFD," << YELLOW_COLOR << "clock sync bits," << BLUE_COLOR << "addressing bits," << MAGENTA_COLOR << "padding," << CYAN_COLOR << "packet type," << RED_COLOR << "timestamp," << GREEN_COLOR << "data length," << RED_COLOR << "sequence number," << MAGENTA_COLOR << "total number of packets," << YELLOW_COLOR << "packet ID," << BLUE_COLOR << "key," << MAGENTA_COLOR << "padding," << CYAN_COLOR << "data," << RED_COLOR << "checksum," << GREEN_COLOR << "ending bits" << RESET_COLOR << std::endl;
     try {
          std::cout << "Printing packet: " << std::endl;
-        std::cout << RED_COLOR << packet.substr(0, 32)      // sync pattern (32 bits)
-        << GREEN_COLOR << packet.substr(32, 8)    // SFD (8 bits)
-        << YELLOW_COLOR << packet.substr(40, 64) // clock sync bits (64 bits)
-        << BLUE_COLOR << packet.substr(104, 64)   // addressing bits (64 bits)
-        << MAGENTA_COLOR << packet.substr(168, 8) // padding (8 bits)
-        << CYAN_COLOR << packet.substr(176, 8)    // packet type (8 bits)
-        << RED_COLOR << packet.substr(184, 32)    // timestamp (32 bits)
-        << GREEN_COLOR << packet.substr(216, 16)  // data length (16 bits)
-        << RED_COLOR << packet.substr(232, 16)    // sequence number (16 bits)
-        << MAGENTA_COLOR << packet.substr(248, 16) // total number of packets (16 bits)
-        << YELLOW_COLOR << packet.substr(264, 32) // packet ID (16 bits)
-        << BLUE_COLOR << packet.substr(296, 64)   // key (64 bits)
-        << MAGENTA_COLOR << packet.substr(360, 8) // padding (8 bits)
-        << CYAN_COLOR << packet.substr(368, 1600) // data (1600 bits)
-        << RED_COLOR << packet.substr(1968, 16)   // checksum (16 bits)
-        << GREEN_COLOR << packet.substr(1984, 24) // ending bits (24 bits)
+        std::cout << RED_COLOR << packet.substr(0, SYNC_PATTERN_SIZE)           // sync pattern (32 bits)
+        << GREEN_COLOR << packet.substr(32, SFD_SIZE)                           // SFD (8 bits)
+        << YELLOW_COLOR << packet.substr(40, CLOCK_SYNC_BITS_SIZE)              // clock sync bits (64 bits)
+        << BLUE_COLOR << packet.substr(104, ADDRESSING_BITS_SIZE)               // addressing bits (64 bits)
+        << MAGENTA_COLOR << packet.substr(168, PADDING_SIZE)                    // padding (8 bits)
+        << CYAN_COLOR << packet.substr(176, PACKET_TYPE_SIZE)                   // packet type (8 bits)
+        << RED_COLOR << packet.substr(184, TIMESTAMP_SIZE)                      // timestamp (32 bits)
+        << GREEN_COLOR << packet.substr(216, DATA_LENGTH_SIZE)                  // data length (16 bits)
+        << RED_COLOR << packet.substr(232, SEQUENCE_NUMBER_SIZE)                // sequence number (16 bits)
+        << MAGENTA_COLOR << packet.substr(248, TOTAL_NUMBER_OF_PACKETS_SIZE)    // total number of packets (16 bits)
+        << YELLOW_COLOR << packet.substr(264, PACKET_ID_SIZE)                   // packet ID (16 bits)
+        << BLUE_COLOR << packet.substr(296, KEY_SIZE)                           // key (64 bits)
+        << MAGENTA_COLOR << packet.substr(360, PADDING_SIZE)                    // padding (8 bits)
+        << CYAN_COLOR << packet.substr(368, DATA_SIZE)                          // data (1600 bits)
+        << RED_COLOR << packet.substr(1968, CHECKSUM_SIZE)                      // checksum (16 bits)
+        << GREEN_COLOR << packet.substr(1984, ENDING_BITS_SIZE)                 // ending bits (24 bits)
         << RESET_COLOR << std::endl;
     } catch (const std::out_of_range &e) {
         std::cerr << "Packet is too short" << std::endl;
